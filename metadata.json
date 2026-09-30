@@ -1,0 +1,6 @@
+{
+  "name": "GeoPulse Live Location Tracker",
+  "description": "Real-time GPS tracker with interactive Google Maps, live telemetry, breadcrumb path recording, geofence alerts, and emergency SOS sharing.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
