@@ -77,21 +77,6 @@ export function formatSpeed(speedMps: number | null | undefined, unit: SpeedUnit
   return { value: converted.toFixed(1), unitLabel: label };
 }
 
-export const YARDS_500_IN_METERS = 457.2; // 500 yards = 457.2 meters
-
-export function yardsToMeters(yards: number): number {
-  return yards * 0.9144;
-}
-
-export function metersToYards(meters: number): number {
-  return meters / 0.9144;
-}
-
-export function formatYards(distanceMeters: number): string {
-  const yards = Math.round(distanceMeters / 0.9144);
-  return `${yards} yards (${formatDistance(distanceMeters)})`;
-}
-
 /**
  * Format distance in meters to readable metric/imperial string
  */

@@ -12,7 +12,6 @@ interface MapLayersProps {
   selectedTargetId?: string | null;
   movementAnchor?: { lat: number; lng: number } | null;
   isMovementDetected?: boolean;
-  yard500Circle?: { enabled: boolean; center: { lat: number; lng: number }; isBreached: boolean } | null;
 }
 
 export function MapLayers({
@@ -25,7 +24,6 @@ export function MapLayers({
   selectedTargetId,
   movementAnchor,
   isMovementDetected = false,
-  yard500Circle,
 }: MapLayersProps) {
   const map = useMap();
   const polylineRef = useRef<google.maps.Polyline | null>(null);
@@ -35,7 +33,6 @@ export function MapLayers({
   const targetCirclesRef = useRef<Map<string, google.maps.Circle>>(new Map());
   const targetLineRef = useRef<google.maps.Polyline | null>(null);
   const anchorCircleRef = useRef<google.maps.Circle | null>(null);
-  const yard500CircleRef = useRef<google.maps.Circle | null>(null);
 
   // Polyline for user's breadcrumb trail
   useEffect(() => {
@@ -261,51 +258,6 @@ export function MapLayers({
       }
     };
   }, [map, movementAnchor, isMovementDetected]);
-
-  // 500 Yard Perimeter Circle (457.2 meters)
-  useEffect(() => {
-    if (!map) return;
-
-    if (!yard500Circle || !yard500Circle.enabled) {
-      if (yard500CircleRef.current) {
-        yard500CircleRef.current.setMap(null);
-        yard500CircleRef.current = null;
-      }
-      return;
-    }
-
-    const strokeColor = yard500Circle.isBreached ? '#ef4444' : '#f59e0b'; // Red if breached, Amber if secure
-    const fillColor = yard500Circle.isBreached ? '#ef4444' : '#f59e0b';
-
-    if (!yard500CircleRef.current) {
-      yard500CircleRef.current = new google.maps.Circle({
-        map,
-        center: yard500Circle.center,
-        radius: 457.2, // Exactly 500 yards in meters
-        strokeColor,
-        strokeOpacity: 0.9,
-        strokeWeight: 2,
-        fillColor,
-        fillOpacity: yard500Circle.isBreached ? 0.25 : 0.12,
-        clickable: false,
-      });
-    } else {
-      yard500CircleRef.current.setCenter(yard500Circle.center);
-      yard500CircleRef.current.setRadius(457.2);
-      yard500CircleRef.current.setOptions({
-        strokeColor,
-        fillColor,
-        fillOpacity: yard500Circle.isBreached ? 0.25 : 0.12,
-      });
-    }
-
-    return () => {
-      if (yard500CircleRef.current) {
-        yard500CircleRef.current.setMap(null);
-        yard500CircleRef.current = null;
-      }
-    };
-  }, [map, yard500Circle]);
 
   // Real-time Traffic Layer
   useEffect(() => {

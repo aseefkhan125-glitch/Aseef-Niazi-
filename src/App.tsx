@@ -9,19 +9,13 @@ import { CheckpointsManager } from './components/CheckpointsManager';
 import { TargetLocator } from './components/TargetLocator';
 import { ProximityFollowHud } from './components/ProximityFollowHud';
 import { MovementSentryAlert } from './components/MovementSentryAlert';
-import { CustomerSupervisorCard } from './components/CustomerSupervisorCard';
-import { AdminYard500Control } from './components/AdminYard500Control';
-import { AdminVoiceBroadcastPanel } from './components/AdminVoiceBroadcastPanel';
-import { LoginModal } from './components/LoginModal';
 import { EmergencySOSModal } from './components/EmergencySOSModal';
 import { TripAnalyticsModal } from './components/TripAnalyticsModal';
 import { TopNav } from './components/TopNav';
-import { ShieldAlert, AlertOctagon, X, Crosshair, Smartphone, Gauge, Shield, MapPin, CircleDot, Volume2, LogIn } from 'lucide-react';
-import { soundFx, formatDistance, calculateDistance, formatYards } from './utils/geoUtils';
-import { speakAnnouncement } from './utils/speechUtils';
+import { ShieldAlert, AlertOctagon, X, Crosshair, Smartphone, Gauge, Shield, MapPin } from 'lucide-react';
+import { soundFx, formatDistance } from './utils/geoUtils';
 import { INITIAL_TRACKED_TARGETS } from './data/trackedTargets';
-import { DEFAULT_ADMIN_SUPERVISORS } from './data/adminSupervisors';
-import { TargetDevice, UserRole, AdminSupervisor, Yard500CircleConfig } from './types/tracker';
+import { TargetDevice } from './types/tracker';
 
 const GOOGLE_MAPS_API_KEY =
   import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyD_dRNGinm25Peet_ae-R9t7R-H8YHPICA';
@@ -35,27 +29,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'targets' | 'telemetry' | 'geofence' | 'checkpoints'>('targets');
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(false);
   const [isFollowCameraActive, setIsFollowCameraActive] = useState<boolean>(true);
-  const [userRole, setUserRole] = useState<UserRole>('admin'); // 'admin' (Controller) vs 'customer' (Subject View)
-  const [activeSupervisor, setActiveSupervisor] = useState<AdminSupervisor>(DEFAULT_ADMIN_SUPERVISORS[0]);
-
-  // 500-Yard Circle Configuration (457.2 meters)
-  const [yard500Config, setYard500Config] = useState<Yard500CircleConfig>({
-    enabled: true,
-    radiusYards: 500,
-    radiusMeters: 457.2,
-    center: { lat: 32.280556, lng: 71.442707 }, // Main location: Hafiz Wala Chak 7 ML
-    targetPhoneNumber: '03019721327',
-    targetName: 'Amber Gull',
-    isBreached: false,
-    lastDisplacementYards: 0,
-    lastAlertTimestamp: null,
-  });
-
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
-  const [lastBroadcastMessage, setLastBroadcastMessage] = useState<string | null>(
-    'Location changed at 30 yard circle North'
-  );
-  const [loggedInUsername, setLoggedInUsername] = useState<string>('Aumber Gull (03019721327)');
 
   // Targets state (including Amber Gull with 200m circle & IMEI)
   const [targets, setTargets] = useState<TargetDevice[]>(INITIAL_TRACKED_TARGETS);
@@ -108,114 +81,6 @@ export default function App() {
     return () => {
       window.removeEventListener('gmp-quota-exceeded', handleQuota);
     };
-  }, []);
-
-  // Evaluate 500-Yard Circle (457.2m) when position updates
-  useEffect(() => {
-    if (!yard500Config.enabled || !currentPoint) return;
-
-    const distMeters = calculateDistance(
-      currentPoint.lat,
-      currentPoint.lng,
-      yard500Config.center.lat,
-      yard500Config.center.lng
-    );
-    const distYards = Math.round(distMeters / 0.9144);
-    const breached = distYards > 500;
-
-    if (breached && !yard500Config.isBreached) {
-      soundFx.playGeofenceWarning();
-      if ('Notification' in window && Notification.permission === 'granted') {
-        try {
-          new Notification('🚨 500 YARD MOVEMENT NOTIFICATION!', {
-            body: `Phone 03019721327 (Amber Gull) location changed by ${distYards} yards (exceeded 500-yard circle)!`,
-          });
-        } catch {
-          // fallback
-        }
-      }
-    }
-
-    setYard500Config((prev) => ({
-      ...prev,
-      isBreached: breached,
-      lastDisplacementYards: distYards,
-      lastAlertTimestamp: breached ? Date.now() : prev.lastAlertTimestamp,
-    }));
-  }, [currentPoint, yard500Config.enabled, yard500Config.center.lat, yard500Config.center.lng]);
-
-  const handleTest500YardNotification = useCallback(() => {
-    soundFx.playGeofenceWarning();
-    if ('Notification' in window && Notification.permission === 'granted') {
-      try {
-        new Notification('🚨 500 YARD MOVEMENT NOTIFICATION TEST', {
-          body: `Supervising Admin ${activeSupervisor.name} tested 500-yard circle notification for Amber Gull (03019721327).`,
-        });
-      } catch {
-        // fallback
-      }
-    }
-  }, [activeSupervisor.name]);
-
-  const handleRecenter500YardCircle = useCallback(() => {
-    if (currentPoint) {
-      setYard500Config((prev) => ({
-        ...prev,
-        center: { lat: currentPoint.lat, lng: currentPoint.lng },
-        isBreached: false,
-        lastDisplacementYards: 0,
-      }));
-      soundFx.playGeofenceWarning();
-    }
-  }, [currentPoint]);
-
-  // Admin Move Location & Voice Announce: "when admin move location the notification to user is in English that location changed at 30 yard circle north"
-  const handleAdminMoveTargetDirection = useCallback(
-    (direction: 'North' | 'South' | 'East' | 'West', yards: number = 30, customMessage?: string) => {
-      const meters = yards * 0.9144;
-      const latDelta = meters / 111320;
-      const baseLat = currentPoint ? currentPoint.lat : 32.280556;
-      const lngDelta = meters / (111320 * Math.cos((baseLat * Math.PI) / 180));
-
-      let dLat = 0;
-      let dLng = 0;
-      if (direction === 'North') dLat = latDelta;
-      if (direction === 'South') dLat = -latDelta;
-      if (direction === 'East') dLng = lngDelta;
-      if (direction === 'West') dLng = -lngDelta;
-
-      // Update target location for Amber Gull (03019721327)
-      setTargets((prev) =>
-        prev.map((t) =>
-          t.phoneNumber.includes('03019721327')
-            ? { ...t, lat: t.lat + dLat, lng: t.lng + dLng, lastPing: Date.now() }
-            : t
-        )
-      );
-
-      const msg = customMessage || `Location changed at ${yards} yard circle ${direction}`;
-      setLastBroadcastMessage(msg);
-      soundFx.playGeofenceWarning();
-      speakAnnouncement(msg);
-    },
-    [currentPoint]
-  );
-
-  // Custom Admin Broadcast: "or Jo bhi admin likhy ga user ko wo hi sunai da ga"
-  const handleBroadcastCustomMessage = useCallback((message: string) => {
-    setLastBroadcastMessage(message);
-    soundFx.playGeofenceWarning();
-    speakAnnouncement(message);
-  }, []);
-
-  const handleLoginSuccess = useCallback((role: UserRole, username: string) => {
-    setUserRole(role);
-    setLoggedInUsername(username);
-    setIsLoginModalOpen(false);
-    if (role === 'customer') {
-      setSelectedTargetId('target-amber-gull');
-    }
-    soundFx.playGeofenceWarning();
   }, []);
 
   // When user clicks anywhere on the map, offer to add a checkpoint or center geofence
@@ -308,77 +173,7 @@ export default function App() {
         currentLng={currentPoint.lng}
         targets={targets}
         selectedTarget={selectedTarget}
-        userRole={userRole}
-        onToggleUserRole={() => setUserRole((prev) => (prev === 'admin' ? 'customer' : 'admin'))}
-        onOpenLogin={() => setIsLoginModalOpen(true)}
       />
-
-      {/* Voice Announcement Broadcast Banner ("or Jo bhi admin likhy ga user ko wo hi sunai da ga") */}
-      {lastBroadcastMessage && (
-        <div className="bg-gradient-to-r from-cyan-950 via-slate-900 to-cyan-950 text-white px-4 py-2 flex items-center justify-between text-xs md:text-sm font-mono font-bold shadow-xl border-b border-cyan-500/40">
-          <div className="flex items-center gap-2">
-            <Volume2 className="w-4 h-4 text-cyan-400 animate-pulse shrink-0" />
-            <span className="text-cyan-300 font-black uppercase text-[11px]">
-              ADMIN VOICE DISPATCH:
-            </span>
-            <span className="text-white italic">
-              "{lastBroadcastMessage}"
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                soundFx.playGeofenceWarning();
-                speakAnnouncement(lastBroadcastMessage);
-              }}
-              className="px-2.5 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-slate-950 text-xs font-black uppercase flex items-center gap-1 transition-colors"
-              title="Hear message spoken aloud in English"
-            >
-              <Volume2 className="w-3.5 h-3.5" />
-              <span>🔊 HEAR VOICE</span>
-            </button>
-            <button
-              onClick={() => setLastBroadcastMessage(null)}
-              className="p-1 hover:bg-slate-800 rounded transition-colors text-slate-400"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 500 Yard Circle Relocation Alert Banner */}
-      {yard500Config.isBreached && (
-        <div className="bg-gradient-to-r from-amber-900 via-orange-800 to-amber-900 text-white px-4 py-2.5 flex items-center justify-between text-xs md:text-sm font-mono font-black shadow-2xl z-30 animate-pulse border-b-2 border-amber-400">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-amber-400 animate-ping" />
-            <span>
-              [500 YARD MOVEMENT NOTIFICATION] PHONE {yard500Config.targetPhoneNumber} ({yard500Config.targetName}) RELOCATED BY {yard500Config.lastDisplacementYards} YARDS FROM CIRCLE! SUPERVISING ADMIN: {activeSupervisor.name}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {userRole === 'admin' && (
-              <button
-                onClick={handleRecenter500YardCircle}
-                className="px-3 py-1 rounded bg-amber-400 text-slate-950 hover:bg-amber-300 text-xs font-black uppercase transition-colors"
-              >
-                RE-CENTER 500Y
-              </button>
-            )}
-            <button
-              onClick={() =>
-                setYard500Config((prev) => ({ ...prev, isBreached: false }))
-              }
-              className="p-1 hover:bg-amber-950 rounded transition-colors text-slate-200"
-              title="Acknowledge notification"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Urgent Geofence Breach Banner Alert */}
       {isGeofenceBreached && !bannerDismissed && (
@@ -446,54 +241,6 @@ export default function App() {
           {/* Tactical Left Sidebar */}
           <aside className="w-full md:w-[420px] lg:w-[460px] bg-slate-950 border-r-2 border-cyan-500/20 flex flex-col h-1/2 md:h-full shrink-0 z-20 overflow-y-auto">
             <div className="p-3.5 space-y-3.5">
-              {/* CUSTOMER TRANSPARENCY CARD (costomer will show which admin will see them) */}
-              {userRole === 'customer' ? (
-                <CustomerSupervisorCard
-                  target={selectedTarget || targets[0]}
-                  supervisor={activeSupervisor}
-                  yard500Config={yard500Config}
-                  lastBroadcastMessage={lastBroadcastMessage}
-                  currentPoint={currentPoint}
-                  onSwitchToAdmin={() => setUserRole('admin')}
-                />
-              ) : (
-                /* ADMIN OPERATIONAL CONTROLS */
-                <>
-                  {/* Voice Dispatch & 30-Yard Movement Panel ("Jo bhi admin likhy ga user ko wo hi sunai da ga") */}
-                  <AdminVoiceBroadcastPanel
-                    target={selectedTarget || targets[0]}
-                    onMoveTargetDirection={handleAdminMoveTargetDirection}
-                    onBroadcastCustomMessage={handleBroadcastCustomMessage}
-                    lastBroadcastMessage={lastBroadcastMessage}
-                  />
-
-                  <AdminYard500Control
-                    yard500Config={yard500Config}
-                    target={selectedTarget || targets[0]}
-                    onToggleEnabled={() =>
-                      setYard500Config((p) => ({ ...p, enabled: !p.enabled }))
-                    }
-                    onRecenterCircle={handleRecenter500YardCircle}
-                    onTestNotification={handleTest500YardNotification}
-                  />
-
-                  {/* Main Location Movement Sentry & Alarm */}
-                  <MovementSentryAlert
-                    movementAnchor={movementAnchor}
-                    isMovementDetected={isMovementDetected}
-                    movementDisplacement={movementDisplacement}
-                    movementAlertEnabled={movementAlertEnabled}
-                    onToggleMovementAlert={() =>
-                      setMovementAlertEnabled(!movementAlertEnabled)
-                    }
-                    movementThresholdMeters={movementThresholdMeters}
-                    onChangeThreshold={setMovementThresholdMeters}
-                    onResetAnchorToLocation={(lat, lng) => resetMovementAnchor(lat, lng)}
-                    onDismissAlarm={dismissMovementAlarm}
-                  />
-                </>
-              )}
-
               {/* Primary Tracking Controls */}
               <TrackingControls
                 isTracking={isTracking}
@@ -508,6 +255,19 @@ export default function App() {
                 setSimMultiplier={setSimulationSpeedMultiplier}
                 onOpenSos={() => setIsSosOpen(true)}
                 gpsError={gpsError}
+              />
+
+              {/* Main Location Movement Sentry & Alarm */}
+              <MovementSentryAlert
+                movementAnchor={movementAnchor}
+                isMovementDetected={isMovementDetected}
+                movementDisplacement={movementDisplacement}
+                movementAlertEnabled={movementAlertEnabled}
+                onToggleMovementAlert={() => setMovementAlertEnabled(!movementAlertEnabled)}
+                movementThresholdMeters={movementThresholdMeters}
+                onChangeThreshold={setMovementThresholdMeters}
+                onResetAnchorToLocation={(lat, lng) => resetMovementAnchor(lat, lng)}
+                onDismissAlarm={dismissMovementAlarm}
               />
 
               {/* Proximity & Live Follow Distance HUD */}
@@ -651,11 +411,6 @@ export default function App() {
               }
               movementAnchor={movementAnchor}
               isMovementDetected={isMovementDetected}
-              yard500Circle={{
-                enabled: yard500Config.enabled,
-                center: yard500Config.center,
-                isBreached: yard500Config.isBreached,
-              }}
             />
           </main>
         </div>
@@ -674,13 +429,6 @@ export default function App() {
         onClose={() => setIsAnalyticsOpen(false)}
         stats={tripStats}
         points={points}
-      />
-
-      {/* Portal Login Modal (Id: AumberGull03019721327 / Password: 03001696099) */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onLoginSuccess={handleLoginSuccess}
-        onClose={() => setIsLoginModalOpen(false)}
       />
     </div>
   );

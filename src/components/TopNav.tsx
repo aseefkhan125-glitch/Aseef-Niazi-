@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TrackingMode, TargetDevice, UserRole } from '../types/tracker';
-import { Radio, AlertOctagon, BarChart2, Share2, ShieldAlert, Check, Shield, Crosshair, Terminal, Clock, UserCheck, ShieldCheck, LogIn } from 'lucide-react';
+import { TrackingMode, TargetDevice } from '../types/tracker';
+import { Radio, AlertOctagon, BarChart2, Share2, ShieldAlert, Check, Shield, Crosshair, Terminal, Clock } from 'lucide-react';
 
 interface TopNavProps {
   trackingMode: TrackingMode;
@@ -14,9 +14,6 @@ interface TopNavProps {
   currentLng: number;
   targets?: TargetDevice[];
   selectedTarget?: TargetDevice | null;
-  userRole: UserRole;
-  onToggleUserRole: () => void;
-  onOpenLogin: () => void;
 }
 
 export function TopNav({
@@ -31,9 +28,6 @@ export function TopNav({
   currentLng,
   targets = [],
   selectedTarget,
-  userRole,
-  onToggleUserRole,
-  onOpenLogin,
 }: TopNavProps) {
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [zuluTime, setZuluTime] = useState<string>('');
@@ -135,39 +129,6 @@ export function TopNav({
               <span className="hidden md:inline">DISPATCH GPS</span>
             </>
           )}
-        </button>
-
-        {/* Role Switcher: Admin Controller vs Customer View */}
-        <button
-          onClick={onToggleUserRole}
-          className={`px-3 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 border transition-all ${
-            userRole === 'admin'
-              ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-400 shadow-md shadow-cyan-500/20'
-              : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-400 shadow-md shadow-emerald-500/20'
-          }`}
-          title="Switch view between Admin Controller and Customer View"
-        >
-          {userRole === 'admin' ? (
-            <>
-              <Shield className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">ADMIN MODE</span>
-            </>
-          ) : (
-            <>
-              <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">CUSTOMER VIEW</span>
-            </>
-          )}
-        </button>
-
-        {/* Portal Login Button (Id: AumberGull03019721327 / Pass: 03001696099) */}
-        <button
-          onClick={onOpenLogin}
-          className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold flex items-center gap-1.5 transition-colors shadow-sm"
-          title="Login as Aumber Gull or Admin"
-        >
-          <LogIn className="w-3.5 h-3.5 text-amber-400" />
-          <span className="hidden md:inline">LOGIN</span>
         </button>
 
         {/* Analytics Modal Button */}

@@ -55,13 +55,13 @@ export interface SimulationRouteConfig {
 export interface TargetDevice {
   id: string;
   name: string; // e.g. "Amber Gull"
-  phoneNumber: string; // e.g. "03019721327"
+  phoneNumber: string; // e.g. "+1 (555) 728-4921"
   imei: string; // 15-digit International Mobile Equipment Identity
   status: 'active' | 'triangulating' | 'triangulated' | 'offline';
   lat: number;
   lng: number;
   uncertaintyRadiusMeters: number; // e.g. 200m circle
-  carrier: string; // e.g. "Jazz 4G"
+  carrier: string; // e.g. "LTE / Tower CID-4819"
   batteryLevel: number; // percentage
   signalDbm: number; // e.g. -76 dBm
   lastPing: number;
@@ -69,30 +69,4 @@ export interface TargetDevice {
   speedKmh?: number;
   notes?: string;
 }
-
-export type UserRole = 'admin' | 'customer';
-
-export interface AdminSupervisor {
-  id: string;
-  name: string;
-  email: string;
-  badgeNumber: string;
-  agency: string;
-  role: 'Super Admin' | 'Tactical Dispatcher' | 'Field Commander';
-  isWatching: boolean;
-  lastActive: number;
-}
-
-export interface Yard500CircleConfig {
-  enabled: boolean;
-  radiusYards: number; // 500 yards
-  radiusMeters: number; // 457.2 meters
-  center: { lat: number; lng: number };
-  targetPhoneNumber: string; // 03019721327
-  targetName: string; // Amber Gull
-  isBreached: boolean;
-  lastDisplacementYards: number;
-  lastAlertTimestamp: number | null;
-}
-
 

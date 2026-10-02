@@ -41,7 +41,6 @@ interface MapContainerProps {
   onSaveTargetLocation?: (target: TargetDevice) => void;
   movementAnchor?: { lat: number; lng: number } | null;
   isMovementDetected?: boolean;
-  yard500Circle?: { enabled: boolean; center: { lat: number; lng: number }; isBreached: boolean } | null;
 }
 
 export function MapContainer({
@@ -62,7 +61,6 @@ export function MapContainer({
   onSaveTargetLocation,
   movementAnchor,
   isMovementDetected = false,
-  yard500Circle,
 }: MapContainerProps) {
   const map = useMap();
   const [mapTheme, setMapTheme] = useState<MapTheme>('hybrid'); // Tactical default: hybrid / satellite
@@ -248,7 +246,7 @@ export function MapContainer({
         onClick={handleMapClick}
         style={{ width: '100%', height: '100%' }}
       >
-        {/* Polyline, Geofence Circle, Accuracy, Target Triangulation Circles, Anchor Circle, 500-Yard Circle, and Traffic Layers */}
+        {/* Polyline, Geofence Circle, Accuracy, Target Triangulation Circles, Anchor Circle, and Traffic Layers */}
         <MapLayers
           points={points}
           geofence={geofence}
@@ -259,7 +257,6 @@ export function MapContainer({
           selectedTargetId={selectedTargetId}
           movementAnchor={movementAnchor}
           isMovementDetected={isMovementDetected}
-          yard500Circle={yard500Circle}
         />
 
         {/* Main Location Anchor Sentry Marker */}
